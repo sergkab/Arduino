@@ -9,6 +9,7 @@ DS3231 Clock;
 
 //
 // 2022 04 16 try vklych rele
+// 2022 04 18 create git
 //
 //  Init 7219
 int pinCS = 9;                               // Указываем к какому выводу подключен контакт CS
