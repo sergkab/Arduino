@@ -1,0 +1,130 @@
+
+#include <TinyWireM.h>
+#include "TM1637.h"
+#define CLK 4
+#define DIO 3 
+int soundPin = 1;             // объявляем переменную с номером пина спикера
+const int buttonPin = 5;      // номер входа, подключенный к кнопке
+int sensorValue = 0;
+boolean status = false;
+TM1637 tm1637(CLK,DIO);
+///// часы ..
+byte decToBcd(byte val){
+  return ( (val/10*16) + (val%10) );
+}
+byte bcdToDec(byte val){
+  return ( (val/16*10) + (val%16) );
+}
+void setDateDs1307(byte second,        // 0-59
+                   byte minute,        // 0-59
+                   byte hour,          // 1-23
+                   byte dayOfWeek,     // 1-7
+                   byte dayOfMonth,    // 1-28/29/30/31
+                   byte month,         // 1-12
+                   byte year)          // 0-99
+{
+   TinyWireM.beginTransmission(0x68);
+   TinyWireM.send(0);
+   TinyWireM.send(decToBcd(second));    
+   TinyWireM.send(decToBcd(minute));
+   TinyWireM.send(decToBcd(hour));     
+   TinyWireM.send(decToBcd(dayOfWeek));
+   TinyWireM.send(decToBcd(dayOfMonth));
+   TinyWireM.send(decToBcd(month));
+   TinyWireM.send(decToBcd(year));
+   TinyWireM.endTransmission();
+}
+void getDateDs1307(byte *second,
+          byte *minute,
+          byte *hour,
+          byte *dayOfWeek,
+          byte *dayOfMonth,
+          byte *month,
+          byte *year)
+{
+  TinyWireM.beginTransmission(0x68);
+  TinyWireM.send(0);
+  TinyWireM.endTransmission();
+  TinyWireM.requestFrom(0x68, 7);
+  *second     = bcdToDec(TinyWireM.receive() & 0x7f);
+  *minute     = bcdToDec(TinyWireM.receive());
+  *hour       = bcdToDec(TinyWireM.receive() & 0x3f); 
+  *dayOfWeek  = bcdToDec(TinyWireM.receive());
+  *dayOfMonth = bcdToDec(TinyWireM.receive());
+  *month      = bcdToDec(TinyWireM.receive());
+  *year       = bcdToDec(TinyWireM.receive());
+}
+float get3231Temp(){
+  byte tMSB, tLSB; 
+  float temp3231;
+  TinyWireM.beginTransmission(0x68);
+  TinyWireM.send(0x11);
+  TinyWireM.endTransmission();
+  TinyWireM.requestFrom(0x68, 2);
+  if(TinyWireM.available()) {
+    tMSB = TinyWireM.receive(); //2's complement int portion
+    tLSB = TinyWireM.receive(); //fraction portion
+    temp3231 = (tMSB & B01111111); //do 2's math on Tmsb
+    temp3231 += ( (tLSB >> 6) * 0.25 ); //only care about bits 7 & 8
+  }
+  else {
+    //oh noes, no data!
+  }
+  return temp3231;
+}
+/////////////////
+void setup() {
+  TinyWireM.begin();
+  tm1637.init();
+  tm1637.set(7); // яркость, от 0 до 7
+  pinMode(soundPin, OUTPUT); //объявляем пин как выход. 
+  pinMode(buttonPin, INPUT_PULLUP);
+ pinMode(5, INPUT);
+    // установка часов 
+        //byte second, minute, hour, dayOfWeek, dayOfMonth, month, year;  second = 30;  minute = 50;  hour = 06;  dayOfWeek = 3; 
+     // день недели 
+     //dayOfMonth = 1; // день 
+      ///month = 4; 
+      //year = 14;  setDateDs1307(second, minute, hour, dayOfWeek, dayOfMonth, month, year); 
+}
+void loop(){
+  byte second, minute, hour, dayOfWeek, dayOfMonth, month, year; 
+  getDateDs1307(&second, &minute, &hour, &dayOfWeek, &dayOfMonth, &month, &year);
+  byte temp = get3231Temp(); 
+  int8_t TimeDisp[4]; 
+    TimeDisp[0] = hour / 10;
+    TimeDisp[1] = hour % 10;
+    TimeDisp[2] = minute / 10;
+    TimeDisp[3] = minute % 10;  
+    if (second%2)
+      tm1637.point(POINT_ON); // включаем точки
+    else
+      tm1637.point(POINT_OFF); // выключаем точки       
+//  }
+  buttonValue = digitalRead(buttonPin); // считываем данные с кнопки
+   if(hour==7)
+   {    
+     if (minute==00)
+     {
+       if (second < 30)
+         status = true;
+       else
+         status = false;
+     }     
+   }
+   if (buttonValue)
+      status = false;
+   if (status)
+    {
+      tone(soundPin, 1500); // включаем звук частотой 100 Гц
+      delay(200);
+      tone(soundPin, 1000); // включаем звук частотой 100 Гц
+      delay(200);
+      tone(soundPin, 500); // включаем звук частотой 100 Гц
+      delay(200);
+    }
+   else
+    noTone(soundPin); // выключаем звук
+  tm1637.display(TimeDisp); // отправляем массив на экран
+}
+
