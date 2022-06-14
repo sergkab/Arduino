@@ -61,6 +61,7 @@ int valKey;
 
 
 // the setup routine runs once when you press reset:
+//  **************
 void setup() {                
   // initialize the digital pin as an output.
   //pinMode(led, OUTPUT);     
@@ -123,8 +124,12 @@ void setup() {
   digitalWrite(anod_tochki, 1 );
   delay ( 500 );
 }
+//  ******* end setup
+
+
 
 // the loop routine runs over and over again forever:
+//  **********
 void loop() {
 
   tecVr = millis();
@@ -237,3 +242,4 @@ void loop() {
 
 //  Serial.println ( "ok");
 }
+//  ********** end loop
